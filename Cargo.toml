@@ -1,0 +1,13 @@
+[workspace]
+members = [
+    "youtube",
+    "core"
+]
+authors = ["Hokanosekai"]
+name = "ytbascii"
+
+[profile.release]
+lto = true
+panic = 'abort'
+incremental = false
+codegen-units = 8

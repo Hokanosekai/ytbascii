@@ -1,6 +1,6 @@
 use futures::executor::block_on;
 
-use crate::http::{get_video_info, get_video_streams};
+use crate::{http::{get_video_info, get_video_streams}, utils::parse_number};
 
 #[derive(Debug, PartialEq)]
 pub enum StreamType {
@@ -115,20 +115,17 @@ impl VideoInfo {
     let snippet = data["snippet"].clone();
     let statistics = data["statistics"].clone();
 
-    let category_id: u32 = match snippet.get("categoryId") {
-      Some(category_id) => category_id.to_string().parse::<u32>().unwrap(),
-      None => 0,
-    };
-    println!("category_id: {}", category_id);
-
     VideoInfo {
-      tags: snippet["tags"].as_array().unwrap().iter().map(|tag| tag.to_string()).collect(),
-      category_id: snippet["categoryId"].as_u64().unwrap() as u32,
-      comment_count: statistics["commentCount"].as_u64().unwrap() as u32,
-      likes: statistics["likeCount"].as_u64().unwrap() as u32,
-      view_count: statistics["viewCount"].as_u64().unwrap() as u32,
-      upload_date: snippet["publishedAt"].to_string(),
-      author: snippet["channelTitle"].to_string(),
+      tags: match snippet["tags"].as_array() {
+        Some(tags) => tags.iter().map(|t| t.to_string()).collect(),
+        None => vec![],
+      },
+      category_id: parse_number(snippet["categoryId"].clone()),
+      comment_count: parse_number(statistics["commentCount"].clone()),
+      likes: parse_number(statistics["likeCount"].clone()),
+      view_count: parse_number(statistics["viewCount"].clone()),
+      upload_date: snippet["publishedAt"].as_str().unwrap().to_string(),
+      author: snippet["channelTitle"].as_str().unwrap().to_string(),
     }
   }
 }
@@ -136,9 +133,9 @@ impl VideoInfo {
 impl Thumbnail {
     pub fn from_json(json: serde_json::Value) -> Thumbnail {
       Thumbnail {
-        url: json["url"].to_string(),
-        width: json["width"].as_u64().unwrap() as u32,
-        height: json["height"].as_u64().unwrap() as u32,
+        url: json["url"].as_str().unwrap().to_string(),
+        width: parse_number(json["width"].clone()),
+        height: parse_number(json["height"].clone()),
       }
     }
 }
@@ -178,10 +175,10 @@ impl Video {
     let data = json.clone();
 
     Video { 
-      id: data["id"].to_string(), 
-      title: data["snippet"]["title"].to_string(), 
-      description: data["snippet"]["description"].to_string(),
-      streams: StreamList::new(data["id"].to_string()).unwrap(), 
+      id: data["id"].as_str().unwrap().to_string(), 
+      title: data["snippet"]["title"].as_str().unwrap().to_string(), 
+      description: data["snippet"]["description"].as_str().unwrap().to_string(),
+      streams: StreamList::new(data["id"].as_str().unwrap()).unwrap(), 
       info: VideoInfo::from_json(data.clone()),
       thumbnails: ThumbnailList::from_json(data.clone()),
     }
@@ -193,28 +190,24 @@ impl Stream {
     let data = json.clone();
 
     let mut stream = Stream {
-      url: data["url"].to_string(),
-      quality: data["quality"].to_string(),
-      quality_label: data["qualityLabel"].to_string(),
-      bitrate: data["bitrate"].as_u64().unwrap() as u32,
-      mime_type: data["mimeType"].to_string(),
-      stream_type: StreamType::from_string(data["mimeType"].to_string()),
-      width: data["width"].as_u64().unwrap() as u32,
-      height: data["height"].as_u64().unwrap() as u32,
-      extension: String::new(),
+      url: data["url"].as_str().unwrap().to_string(),
+      quality: data["quality"].as_str().unwrap().to_string(),
+      quality_label: String::new(),
+      bitrate: parse_number(data["bitrate"].clone()),
+      mime_type: data["mimeType"].as_str().unwrap().to_string(),
+      stream_type: StreamType::from_string(data["mimeType"].as_str().unwrap().to_string()),
+      width: parse_number(data["width"].clone()),
+      height: parse_number(data["height"].clone()),
+      extension: data["mimeType"].to_string().split("/").collect::<Vec<&str>>()[1].split(";").collect::<Vec<&str>>()[0].to_string(),
       fps: 0,
-      duration: data["approxDurationMs"].as_u64().unwrap() as u32,
+      duration: parse_number(data["approxDurationMs"].clone()),
       content_length: 0,
       file_path: String::new(),
     };
 
     if stream.stream_type == StreamType::Video {
-      stream.extension = data["mimeType"].to_string().split("/").collect::<Vec<&str>>()[1].to_string();
-      stream.fps = data["fps"].as_u64().unwrap() as u32;
-    }
-
-    if stream.stream_type == StreamType::Audio {
-      stream.extension = data["mimeType"].to_string().split("/").collect::<Vec<&str>>()[1].to_string();
+      stream.fps = parse_number(data["fps"].clone());
+      stream.quality_label = data["qualityLabel"].as_str().unwrap().to_string();
     }
 
     stream
@@ -226,20 +219,19 @@ impl Stream {
 }
 
 impl StreamList {
-    pub fn new(videoID: String) -> Result<StreamList, Error> {
-      let video_streams = match block_on(get_video_streams(&videoID)) {
+    pub fn new(video_id: &str) -> Result<StreamList, Error> {
+      let video_streams = match block_on(get_video_streams(video_id)) {
         Ok(streams) => streams,
         Err(e) => return Err(Error::NetworkError(Box::new(e))),
       };
 
-      let adaptive_formats = &video_streams["streamingData"]["adaptiveFormats"];
-      println!("{:?}", adaptive_formats);
+      let adaptive_formats = &video_streams["streamingData"]["adaptiveFormats"].as_array();
       let mut streams: Vec<Stream> = Vec::new();
 
-      /*for format in adaptive_formats {
-        let mut stream = Stream::from_json(format.clone());
+      adaptive_formats.unwrap().iter().for_each(|format| {
+        let stream = Stream::from_json(format.clone());
         streams.push(stream);
-      }*/
+      });
 
       Ok(StreamList { streams })
     }

@@ -129,10 +129,8 @@ dependencies = [
 name = "core"
 version = "0.1.0"
 dependencies = [
- "reqwest",
- "serde",
- "serde_json",
  "tokio",
+ "youtube",
 ]
 
 [[package]]
@@ -1603,7 +1601,9 @@ dependencies = [
 name = "youtube"
 version = "0.1.0"
 dependencies = [
+ "futures",
  "google-youtube3",
+ "reqwest",
  "serde",
  "serde_json",
 ]

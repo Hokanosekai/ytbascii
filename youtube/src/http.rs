@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Result;
 use serde_json::json;
 
-use crate::models::Stream;
+use crate::models::stream::Stream;
 
 pub async fn get_video_info(video_id: &str) -> Result<serde_json::Value> {
 		let url = format!("https://www.googleapis.com/youtube/v3/videos?id={}&part=snippet,statistics&key=AIzaSyDHTKjtUchUxUOzCtYW4V_h1zzcyd0P6c0",

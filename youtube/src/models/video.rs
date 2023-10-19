@@ -1,9 +1,9 @@
 use futures::executor::block_on;
 
-use crate::http::get_video_info;
+use crate::http::{get_video_info, download_video_stream};
 use crate::utils::parse_number;
 use crate::models::error::Error;
-use crate::models::stream::StreamList;
+use crate::models::stream::{StreamList, QualityType};
 use crate::models::thumbnail::ThumbnailList;
 
 #[derive(Debug)]
@@ -96,7 +96,30 @@ impl Video {
     }
   }
 
-  pub fn download(&self) {
+  pub fn download(&self) -> String {
+    crate::get_logger().info(format!("Downloading video {}", self.id));
 
+    let mut stream = self.streams.get_best_stream(QualityType::Small);
+    crate::get_logger().info(format!("Downloading stream {}", stream.quality_label));
+
+    let path = format!("data/{}/{:?}", self.id, stream.stream_type);
+    std::fs::create_dir_all(path.clone())
+      .expect("Failed to create videos directory");
+
+    stream.set_file_path(format!("{}/{}.{}", path, stream.quality_label, stream.extension));
+
+    stream = match block_on(download_video_stream(stream)) {
+        Ok(r) => {
+          crate::get_logger().info(format!("Downloaded video {}", self.id));
+          r
+        },
+        Err(e) => {
+          crate::get_logger().error(format!("Failed to download video {}", self.id));
+          crate::get_logger().error(format!("{:?}", e));
+          panic!();
+        }
+    };
+
+    stream.file_path.clone()
   }
 }

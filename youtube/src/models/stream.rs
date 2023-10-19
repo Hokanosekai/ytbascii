@@ -1,5 +1,7 @@
 use futures::executor::block_on;
 
+extern crate reqwest;
+
 use crate::http::get_video_streams;
 use crate::utils::parse_number;
 use crate::models::error::Error;
@@ -12,12 +14,26 @@ pub enum StreamType {
   Unknown,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum QualityType {
+  Tiny,
+  Small,
+  Medium,
+  Large,
+  HD720,
+  HD1080,
+  HD1440,
+  HD2160,
+  HD2880,
+  HighRes,
+}
+
 #[derive(Debug)]
 pub struct Stream {
   // The stream url
   pub url: String,
   // The stream quality
-  pub quality: String,
+  pub quality: QualityType,
   // The stream quality label
   pub quality_label: String,
   // The stream bitrate
@@ -54,7 +70,7 @@ impl Stream {
 
     let mut stream = Stream {
       url: data["url"].as_str().unwrap().to_string(),
-      quality: data["quality"].as_str().unwrap().to_string(),
+      quality: QualityType::from_string(data["quality"].as_str().unwrap().to_string()),
       quality_label: String::new(),
       bitrate: parse_number(data["bitrate"].clone()),
       mime_type: data["mimeType"].as_str().unwrap().to_string(),
@@ -64,7 +80,7 @@ impl Stream {
       extension: data["mimeType"].to_string().split("/").collect::<Vec<&str>>()[1].split(";").collect::<Vec<&str>>()[0].to_string(),
       fps: 0,
       duration: parse_number(data["approxDurationMs"].clone()),
-      content_length: 0,
+      content_length: parse_number(data["contentLength"].clone()),
       file_path: String::new(),
     };
 
@@ -83,7 +99,7 @@ impl Stream {
   pub fn clone(&self) -> Stream {
     Stream {
       url: self.url.to_string(),
-      quality: self.quality.to_string(),
+      quality: self.quality.clone(),
       quality_label: self.quality_label.to_string(),
       bitrate: self.bitrate,
       mime_type: self.mime_type.to_string(),
@@ -128,6 +144,18 @@ impl StreamList {
 
       StreamList { streams }
     }
+
+    pub fn get_best_stream(&self, quality: QualityType) -> Stream {
+      let mut best_stream = self.streams[0].clone();
+
+      self.streams.iter().for_each(|stream| {
+          if stream.quality == quality && stream.extension == "mp4" {
+              best_stream = stream.clone();
+          }
+      });
+
+      best_stream
+    }
 }
 
 impl StreamType {
@@ -160,4 +188,52 @@ impl StreamType {
         StreamType::Unknown => StreamType::Unknown,
       }
     }
+}
+
+impl QualityType {
+  pub fn from_string(quality: String) -> QualityType {
+    match quality.as_str() {
+      "tiny" => QualityType::Tiny,
+      "small" => QualityType::Small,
+      "medium" => QualityType::Medium,
+      "large" => QualityType::Large,
+      "hd720" => QualityType::HD720,
+      "hd1080" => QualityType::HD1080,
+      "hd1440" => QualityType::HD1440,
+      "hd2160" => QualityType::HD2160,
+      "hd2880" => QualityType::HD2880,
+      "highres" => QualityType::HighRes,
+      _ => QualityType::Medium,
+    }
+  }
+
+  pub fn to_string(&self) -> String {
+    match self {
+      QualityType::Tiny => "tiny",
+      QualityType::Small => "small",
+      QualityType::Medium => "medium",
+      QualityType::Large => "large",
+      QualityType::HD720 => "hd720",
+      QualityType::HD1080 => "hd1080",
+      QualityType::HD1440 => "hd1440",
+      QualityType::HD2160 => "hd2160",
+      QualityType::HD2880 => "hd2880",
+      QualityType::HighRes => "highres",
+    }.to_string()
+  }
+
+  pub fn clone(&self) -> QualityType {
+    match self {
+      QualityType::Tiny => QualityType::Tiny,
+      QualityType::Small => QualityType::Small,
+      QualityType::Medium => QualityType::Medium,
+      QualityType::Large => QualityType::Large,
+      QualityType::HD720 => QualityType::HD720,
+      QualityType::HD1080 => QualityType::HD1080,
+      QualityType::HD1440 => QualityType::HD1440,
+      QualityType::HD2160 => QualityType::HD2160,
+      QualityType::HD2880 => QualityType::HD2880,
+      QualityType::HighRes => QualityType::HighRes,
+    }
+  }
 }

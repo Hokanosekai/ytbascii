@@ -1,10 +1,12 @@
 [workspace]
 members = [
     "youtube",
-    "core"
+    "core",
+    "logger",
 ]
 authors = ["Hokanosekai"]
 name = "ytbascii"
+resolver = "1"
 
 [profile.release]
 lto = true

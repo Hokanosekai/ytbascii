@@ -1,0 +1,10 @@
+[package]
+name = "fetcher"
+version = "0.1.0"
+authors = ["Hokanosekai"]
+edition = "2021"
+
+[dependencies]
+logger = { path = "../logger" }
+serde = "1.0"
+serde_json = "1.0"

@@ -97,10 +97,10 @@ impl Video {
   }
 
   pub fn download(&self) -> String {
-    crate::get_logger().info(format!("Downloading video {}", self.id));
+    //crate::get_logger().info(format!("Downloading video {}", self.id));
 
     let mut stream = self.streams.get_best_stream(QualityType::Small);
-    crate::get_logger().info(format!("Downloading stream {}", stream.quality_label));
+    //crate::get_logger().info(format!("Downloading stream {}", stream.quality_label));
 
     let path = format!("data/{}/{:?}", self.id, stream.stream_type);
     std::fs::create_dir_all(path.clone())
@@ -110,12 +110,12 @@ impl Video {
 
     stream = match block_on(download_video_stream(stream)) {
         Ok(r) => {
-          crate::get_logger().info(format!("Downloaded video {}", self.id));
+          //crate::get_logger().info(format!("Downloaded video {}", self.id));
           r
         },
         Err(e) => {
-          crate::get_logger().error(format!("Failed to download video {}", self.id));
-          crate::get_logger().error(format!("{:?}", e));
+          //crate::get_logger().error(format!("Failed to download video {}", self.id));
+          //crate::get_logger().error(format!("{:?}", e));
           panic!();
         }
     };

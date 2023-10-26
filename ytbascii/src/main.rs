@@ -1,7 +1,14 @@
+pub mod config;
+pub mod defaults;
 
-use youtube::models::video::Video;
-use logger::{Level, Logger};
-use ffmpeg_next::{
+use lazy_static::lazy_static;
+use std::sync::Mutex;
+
+use config::{InvidiousConfig, Config};
+use logger::{create_logger, ModuleType, Logger};
+
+use api::init_module as init_api;
+/* use ffmpeg_next::{
     format::{input, Pixel},
     media::Type,
     software::scaling::{Context, Flags},
@@ -39,7 +46,7 @@ fn save_frame(frame: &Frame, index: usize, output_path: &str) -> std::io::Result
 }
 
 fn save_ascii_art(frame: &Frame, index: usize, output_path: &str) -> std::io::Result<()> {
-    
+
     let (cols, rows) = utils::get_shell_dim();
 
     std::fs::create_dir_all(output_path)?;
@@ -117,24 +124,103 @@ fn extract_frames(input_path: &str, output_path: &str) {
         }
     }
 }
+*/
+// Define a lazy_static global instance of the CoreLogger
+lazy_static! {
+  static ref CORE_LOGGER: Mutex<Box<dyn Logger>> = Mutex::new(create_logger(ModuleType::Core));
+  static ref INVIDIOUS_CONFIG: Mutex<Option<InvidiousConfig>> = Mutex::new(None);
+}
+
+// Function to access the global CoreLogger instance
+pub fn get_logger() -> std::sync::MutexGuard<'static, Box<dyn Logger>> {
+  CORE_LOGGER.lock().expect("Failed to lock CoreLogger")
+}
+
+fn print_banner() {
+  println!(
+      "
+  ██╗   ██╗████████╗██████╗  █████╗ ███████╗ ██████╗██╗██╗
+  ╚██╗ ██╔╝╚══██╔══╝██╔══██╗██╔══██╗██╔════╝██╔════╝██║██║
+   ╚████╔╝    ██║   ██████╔╝███████║███████╗██║     ██║██║
+    ╚██╔╝     ██║   ██╔══██╗██╔══██║╚════██║██║     ██║██║
+     ██║      ██║   ██████╔╝██║  ██║███████║╚██████╗██║██║
+     ╚═╝      ╚═╝   ╚═════╝ ╚═╝  ╚═╝╚══════╝ ╚═════╝╚═╝╚═╝
+  "
+  );
+  // print version
+  println!("Version: {}", env!("CARGO_PKG_VERSION"));
+  println!();
+}
+
+fn init_module() {
+  get_logger().info("Initializing core module".to_string());
+  init_config();
+  init_modules();
+}
+
+fn init_config() {
+  get_logger().info("Initializing config".to_string());
+  // Init config
+  let mut invidious_config = INVIDIOUS_CONFIG.lock().expect("Failed to lock InvidiousConfig");
+  let config = InvidiousConfig::new(defaults::DEFAULT_INVIDIOUS_CONFIG_PATH.to_string());
+  *invidious_config = Some(config);
+  get_logger().info("Invidious config initialized".to_string());
+}
+
+fn get_invicous_config() -> std::sync::MutexGuard<'static, Option<InvidiousConfig>> {
+  INVIDIOUS_CONFIG.lock().expect("Failed to lock InvidiousConfig")
+}
+
+fn init_modules() {
+  get_logger().info("Initializing modules...".to_string());
+  // Init modules
+  init_api();
+}
 
 #[tokio::main]
 async fn main() -> () {
-    // Init loggers
-    init_loggers();
+  // Print banner
+  print_banner();
+
+  // Init module
+  init_module();
+  
+  // Load config
+  get_invicous_config().as_mut().unwrap().load();
+  get_invicous_config().as_mut().unwrap().check_status();
+  get_invicous_config().as_mut().unwrap().save();
+
+  // Get random server
+  let server = get_invicous_config().as_mut().unwrap().get_random_server().clone();
+  get_logger().info(format!("Random server: {:#?}", server));
+
+  // Create api client
+  let api_client = api::client::APIClient::new(server.url);
+  let _ = api_client.search(api::fetcher::SearchParams {
+    q: "test".to_string(),
+    page: Some(1),
+    sort_by: Some("relevance".to_string()),
+    date: None,
+    duration: None,
+    ctype: None,
+    features: None,
+    region: None,
+  });
+
+  let _ = api_client.get_video("YSNRcrzSul0".to_string(), api::fetcher::VideoParams {
+    region: Some("FR".to_string()),
+  });
 
     // Get terminal dimensions
-    let (cols, rows) = utils::get_shell_dim();
+    //let (cols, rows) = utils::get_shell_dim();
 
-    let video = Video::new("BAyrperws4c").unwrap();
-
+    //let video = Video::new("BAyrperws4c").unwrap();
 
     // Download the best stream
-    let file_path = video.download();
+    //let file_path = video.download();
 
-    let output_path = format!("data/{}/frames", video.id);
+    //let output_path = format!("data/{}/frames", video.id);
 
     // Extract frames
-    extract_frames(file_path.as_str(), output_path.as_str());
-
+    //extract_frames(file_path.as_str(), output_path.as_str());
 }

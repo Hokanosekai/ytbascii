@@ -69,8 +69,8 @@ pub async fn download_video_stream(stream: Stream) -> Result<Stream> {
 	  let mut easy = Easy::new();
 		easy.url(&stream.url).unwrap();
 
-		crate::get_logger().info(format!("Downloading video stream to {}", stream.file_path.clone()));
-		crate::get_logger().info(format!("Downloading {} bytes", stream.content_length));
+		//crate::get_logger().info(format!("Downloading video stream to {}", stream.file_path.clone()));
+		//crate::get_logger().info(format!("Downloading {} bytes", stream.content_length));
 
 		let mut file = std::fs::File::create(stream.file_path.clone())
 				.expect("Failed to create file");
@@ -103,8 +103,8 @@ pub async fn download_video_stream(stream: Stream) -> Result<Stream> {
 			Err(e) => {
 				std::io::stdout().flush().unwrap();
 				println!();
-				crate::get_logger().error(format!("Failed to download video stream to {}", stream.file_path.clone()));
-				crate::get_logger().error(format!("{:?}", e));
+				//crate::get_logger().error(format!("Failed to download video stream to {}", stream.file_path.clone()));
+				//crate::get_logger().error(format!("{:?}", e));
 			}
 		}
 

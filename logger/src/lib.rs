@@ -1,3 +1,7 @@
+pub mod colors;
+
+use colors::{YELLOW, CYAN, GREEN, RESET, PURPLE, RED, ITALIC};
+
 // Define a Level enum
 pub enum LogLevel {
     Success,
@@ -11,17 +15,17 @@ pub enum LogLevel {
 impl LogLevel {
     pub fn to_string(&self) -> String {
         match self {
-            LogLevel::Success => "Success".to_string(),
-            LogLevel::Info => "Info".to_string(),
-            LogLevel::Warn => "Warn".to_string(),
-            LogLevel::Debug => "Debug".to_string(),
-            LogLevel::Error => "Error".to_string(),
+            LogLevel::Success => format!("{}{}{}", GREEN, "Success".to_string(), RESET),
+            LogLevel::Info => format!("{}{}{}", CYAN, "Info".to_string(), RESET),
+            LogLevel::Warn => format!("{}{}{}", YELLOW, "Warn".to_string(), RESET),
+            LogLevel::Debug => format!("{}{}{}", PURPLE, "Debug".to_string(), RESET),
+            LogLevel::Error => format!("{}{}{}", RED, "Error".to_string(), RESET),
         }
     }
 }
 
 // Define a Logger trait
-trait Logger {
+pub trait Logger: Send + Sync {
     fn log(&self, message: &str, level: LogLevel);
     fn success(&self, message: String) {
         self.log(&message, LogLevel::Success);
@@ -40,36 +44,36 @@ trait Logger {
     }
 }
 
-// Implement Logger for Fetcher module
-struct FetcherLogger;
+// Implement Logger for API module
+pub struct APILogger;
 
-impl Logger for FetcherLogger {
+impl Logger for APILogger {
     fn log(&self, message: &str, level: LogLevel) {
-        println!("[Fetcher] [{}] {}", level.to_string(), message);
+        println!("[{}API{}] [{}] {}", ITALIC, RESET, level.to_string(), message);
     }
 }
 
 // Implement Logger for UI module
-struct UiLogger;
+pub struct UiLogger;
 
 impl Logger for UiLogger {
     fn log(&self, message: &str, level: LogLevel) {
-        println!("[UI] [{}] {}", level.to_string(), message);
+        println!("[{}UI{}] [{}] {}", ITALIC, RESET, level.to_string(), message);
     }
 }
 
 // Implement Logger for Core module
-struct CoreLogger;
+pub struct CoreLogger;
 
 impl Logger for CoreLogger {
     fn log(&self, message: &str, level: LogLevel) {
-        println!("[Core] [{}] {}", level.to_string(), message);
+        println!("[{}Core{}] [{}] {}", ITALIC, RESET, level.to_string(), message);
     }
 }
 
 // Enum to represent different modules
 pub enum ModuleType {
-    Fetcher,
+    API,
     Ui,
     Core,
 }
@@ -77,7 +81,7 @@ pub enum ModuleType {
 // Function to create a logger for a specific module
 pub fn create_logger(module_type: ModuleType) -> Box<dyn Logger> {
     match module_type {
-        ModuleType::Fetcher => Box::new(FetcherLogger),
+        ModuleType::API => Box::new(APILogger),
         ModuleType::Ui => Box::new(UiLogger),
         ModuleType::Core => Box::new(CoreLogger),
     }

@@ -1,8 +1,8 @@
 [workspace]
 members = [
-    "youtube",
-    "core",
+    "ytbascii",
     "logger",
+    "api",
 ]
 authors = ["Hokanosekai"]
 name = "ytbascii"
